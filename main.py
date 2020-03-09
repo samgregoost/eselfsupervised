@@ -2,9 +2,11 @@ import tensorflow as tf
 import random
 #import tf.keras.layers.Dense
 import numpy as np
+import matplotlib.pyplot as plt
+import math as ma
 
 def fun(m,x):
-	return m*x
+	return m*ma.pow(x,1)
 
 
 
@@ -83,13 +85,16 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 train_op = optimizer.minimize(loss)
 # Initializing the variables
 init = tf.global_variables_initializer()
-
+fig = plt.figure()
 with tf.Session() as sess:
 	sess.run(init)
-
+	x_array = np.array([])
+	y_array = np.array([])
+	
 	for epoch in range(1000):
 		batch_x, batch_y = set_batch(batch_size,4)
-
+		x_array = np.append(x_array, batch_x)
+		y_array = np.append(y_array, batch_y)
 		
 		_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
                                                             Y: batch_y})
@@ -97,19 +102,41 @@ with tf.Session() as sess:
 		batch_x_, batch_y_ = set_batch(batch_size,-4)
 
 		_, c = sess.run([train_op, loss], feed_dict={X: batch_x_,
-                                                            Y: batch_y_})
+                                                           Y: batch_y_})
 		print(c)
-
-
-
+		x_array = np.append(x_array, batch_x_)
+		y_array = np.append(y_array, batch_y_)
+		
+	ax = fig.add_subplot(111)
+	xs = x_array[:]
+	ys = y_array[:]
+	ax.scatter(xs, ys,color='blue')
 	
+#	fig = plt.figure()
 
-
-	for x in range(10):
+	x_array = np.array([])
+	y_array = np.array([])
+	for x in range(1000):
 		k = random.uniform(0, 1)
 		k_ = np.reshape(k,(-1,1))
 		y = sess.run([prediction],  feed_dict={X:k_})
+		x_array = np.append(x_array, k)
+		y_array = np.append(y_array, y)
 		print(str(k) + "," + str(y))
+
+
+	xs = x_array[:]
+	ys = y_array[:]
+	ax = fig.add_subplot(111)
+#	ax.scatter(xs, ys,color='red')
+
+
+	ax.set_xlabel('X Label')
+	ax.set_ylabel('Y Label')
+	#ax.set_zlabel('Z Label')
+
+	#plt.axis('off')
+	plt.savefig("./gt_1.png", bbox_inches='tight')
 
 
 

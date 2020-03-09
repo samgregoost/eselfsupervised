@@ -61,7 +61,7 @@ def set_batch(batch_size):
 	x_array = np.array([])
 	y_array = np.array([])
 	for x in range(batch_size):
-		randnum = random.randint(1,100)
+		randnum = random.randint(1,101)
 		if randnum > 50:
 			maxx = 4
 		else:
@@ -168,7 +168,7 @@ init = tf.global_variables_initializer()
 with tf.Session() as sess:
 	sess.run(init)
 	saver = tf.train.Saver()
-#	saver.restore(sess,'./model.ckpt')
+	saver.restore(sess,'./model.ckpt')
 	for epoch in range(100000):
 		randnum = random.randint(1,101)
 		if randnum > 50:
@@ -208,8 +208,9 @@ with tf.Session() as sess:
 			v_prev = np.copy(v)
 			v = 0.001*v - 0.001*g[0][0]
 			z += 0.001 * v_prev + (1+0.001)*v
-			z = np.clip(z, -0.1, 0.1)			
-			
+			z = np.clip(z, -0.1, 0.1)
+			z = [np.random.uniform(low=0.07, high=0.1, size=(1,1)) if z_ > 0 else np.random.uniform(low=-0.1, high=-0.07, size=(1,1)) for z_ in z]			
+			z = np.reshape(z,(3,1))
 			z_ne = np.copy(z)
 			y_new = np.reshape(sess.run([y_], feed_dict={X: batch_x,
                                                             Y: batch_y, Z:z}),(-1,3))
@@ -248,7 +249,7 @@ with tf.Session() as sess:
 			_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
                                                             Y: batch_y, Z:z})
 		print("saving model")
-		saver.save(sess, "./model_unbalanced.ckpt")
+		saver.save(sess, "./model_binary.ckpt")
 
 
 #		predy = sess.run([y_], feed_dict={X: batch_x,

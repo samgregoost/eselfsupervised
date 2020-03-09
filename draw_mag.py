@@ -3,6 +3,7 @@ import random
 #import tf.keras.layers.Dense
 import numpy as np
 import math as ma
+import matplotlib.pyplot as plt
 
 def fun(m,x):
 	return m*x
@@ -43,7 +44,6 @@ Y_new = tf.placeholder("float", [None, 3])
 Y_old = tf.placeholder("float", [None, 3])
 
 
-
 weights = {
     'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
     'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
@@ -61,7 +61,7 @@ def set_batch(batch_size):
 	x_array = np.array([])
 	y_array = np.array([])
 	for x in range(batch_size):
-		randnum = random.randint(1,100)
+		randnum = random.randint(1,101)
 		if randnum > 50:
 			maxx = 4
 		else:
@@ -125,7 +125,7 @@ def mag_pred(z,x):
     layer_1 = tf.nn.relu(tf.compat.v1.layers.dense(h_,256))
     # Hidden fully connected layer with 256 neurons
     layer_2 = tf.nn.relu(tf.compat.v1.layers.dense(layer_1,256))
-    # Output fully connected layer with a neuron for each class
+# Output fully connected layer with a neuron for each class
     out_layer =  tf.compat.v1.layers.dense(layer_2,1)
     return out_layer
 
@@ -137,13 +137,12 @@ y_ = dec(h,Z)
 
 z_new_pred = z_pred(Z_old,X_old)
 magnitude_pred =  mag_pred(Z_old,X_old)
+k_energy =  tf.clip_by_value(tf.math.square(magnitude_pred ),0.0,10.0)
 
-magnitude_real = tf.reduce_sum(tf.abs(Y_new - Y_old),axis = 1, keep_dims = True)
 
-mag_loss = tf.reduce_mean(tf.abs(magnitude_pred-  magnitude_real))
-z_pred_loss = tf.reduce_mean(tf.squared_difference(z_new_pred , Z_new))
+z_loss = tf.reduce_mean(tf.squared_difference(z_new_pred , Z_new))
 
-z_loss = z_pred_loss + mag_loss
+
 
 loss = tf.reduce_mean(tf.squared_difference(y_, Y))
 
@@ -152,7 +151,7 @@ train_op = optimizer.minimize(loss)
 train_z =  optimizer.minimize(z_loss)
 
 # Initializing the variables
-
+mag_grads = tf.gradients(ys = k_energy, xs = Z_old)
 grads = tf.gradients(ys = loss, xs = Z)
 init = tf.global_variables_initializer()
 
@@ -163,13 +162,23 @@ init = tf.global_variables_initializer()
 
 
 #grads = tf.gradients(ys = loss, xs = Z)
-
-
+fig  = plt.figure()
+x_array = np.array([])
+y_array = np.array([])
+dir_array_y = np.array([])
+dir_array_x = np.array([])
+e_array =np.array([])
 with tf.Session() as sess:
 	sess.run(init)
 	saver = tf.train.Saver()
-#	saver.restore(sess,'./model.ckpt')
-	for epoch in range(100000):
+
+	saver.restore(sess, "./model.ckpt")
+
+	batch_x, batch_y = set_batch(batch_size)
+	
+	for epoch in range(10000):
+		batch_x, batch_y = set_batch(batch_size)
+		'''
 		randnum = random.randint(1,101)
 		if randnum > 50:
 			maxx = 4
@@ -179,11 +188,12 @@ with tf.Session() as sess:
 		batch_x, batch_y = set_batch(batch_size)
 	
 #		z = np.reshape(np.array((random.uniform(0, 1),random.uniform(0, 1))),(-1,2))
-		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
+#		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
 	#	_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
                     #                                        Y: batch_y, Z:z})
 		print("new batch begins!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 		v = 0
+		
 		for p in range(20):
 
 			z_ol = np.copy(z)
@@ -195,14 +205,14 @@ with tf.Session() as sess:
 			print(c)
 			print("z")
 			print(z)
-			predy = np.reshape(sess.run([y_], feed_dict={X: batch_x,
-                                                            Y: batch_y, Z:z}),(-1,3))
+			predy = sess.run([y_], feed_dict={X: batch_x,
+                                                            Y: batch_y, Z:z})
 
-			print("y_old")
+			print("y_")
 			print(predy)
 			print("y")
 			print(batch_y)
-		
+			print("###################################")
 			g = sess.run([grads],feed_dict={X: batch_x,Y: batch_y,Z:z})
 #			print(g[0][0])
 			v_prev = np.copy(v)
@@ -211,20 +221,11 @@ with tf.Session() as sess:
 			z = np.clip(z, -0.1, 0.1)			
 			
 			z_ne = np.copy(z)
-			y_new = np.reshape(sess.run([y_], feed_dict={X: batch_x,
-                                                            Y: batch_y, Z:z}),(-1,3))
-			print("y_new")
-			print(y_new)
-	#		_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne})
-			
-			
+
+			_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne})
+
+
 			z_new_pre = sess.run([z_new_pred], feed_dict={X_old: x_ol, Z_old:z_ol})
-
-			mag_new =  sess.run([magnitude_real], feed_dict={Y_old:predy, Y_new:y_new})
-			mag_pred = sess.run([magnitude_pred], feed_dict={Z_old:z_ol, X_old: x_ol})
-
-			_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne,Y_old:predy, Y_new:y_new })
-			
 			print("z loss")
 			print(z_lo)
 			print("z_old")
@@ -233,11 +234,7 @@ with tf.Session() as sess:
 			print(z_ne)
 			print("z_new_pred")
 			print(z_new_pre)
-			print("mag")
-			print(mag_new )
-			print("mag_pred")
-			print(mag_pred)		
-			print("##########################################################")	
+			
 		#	c = sess.run([loss], feed_dict={X: batch_x,
                      #                                       Y: batch_y, Z:z})
 			
@@ -248,15 +245,15 @@ with tf.Session() as sess:
 			_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
                                                             Y: batch_y, Z:z})
 		print("saving model")
-		saver.save(sess, "./model_unbalanced.ckpt")
-
+		saver.save(sess, "./model.ckpt")
+		
 
 #		predy = sess.run([y_], feed_dict={X: batch_x,
  #                                                           Y: batch_y, Z:z})	
 
 
 	#	batch_x_, batch_y_ = set_batch(batch_size,-maxx)
-		'''
+		
 		#z_ = np.reshape(np.array((random.uniform(0, 1),random.uniform(0, 1))),(-1,2))
 	#	z = np.reshape(np.array(random.uniform(0, 1)),(-1,1))
 		z = np.reshape(np.random.uniform(low=-0.0, high=1.0, size=(100,1)),(-1,1))
@@ -278,9 +275,54 @@ with tf.Session() as sess:
          #                                                   Y: batch_y, Z:z})
 		
 		'''
+	#uncomment below line 
+	#	z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
+	
 		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
-		c = sess.run([loss], feed_dict={X: batch_x,
-                                                            Y: batch_y, Z:z})
+#		z = z/np.abs(z) * maxx
+	
+		c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+	
+		for l in range(1):
+			energy = np.reshape(sess.run([k_energy], feed_dict={X_old: batch_x, Z_old:z}),(-1,1))
+			print("energy")
+			print(energy)
+#		g =  sess.run([mag_grads],feed_dict={X_old: batch_x,Z_old:z})
+#		v = 0.001*g[0][0]
+#		mom = (1+0.001)*v
+#		print("mom")
+#		print(mom)
+		
+			print("z")
+			print(z)
+			c_ = sess.run([y_], feed_dict={X: batch_x, Z:z})
+			print("y_pred")
+			print(c_)
+			z_old = np.copy(z)
+			z = np.reshape(sess.run([z_new_pred], feed_dict={X_old: batch_x, Z_old:z}),(-1,1))
+#		z = np.clip(z, -0.1, 0.1)
+			print("z_new")
+			print(z)
+			c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+			print("y_pred_new")
+			print(c)
+			print("z_new_changed")
+			if l < 1:
+				z_diff = z - z_old
+			#	z = z + z_diff/np.abs(z_diff)*0.1*energy
+				if np.all(z_diff):
+					z = z + z_diff/np.abs(z_diff)*0.1*energy
+				else:
+					z = z
+				z = np.clip(z, -0.1, 0.1)
+				print(z)
+			c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+			print("x")
+			print(batch_x)
+			print("y_pred_new_changed")
+			print(c)
+		
+
 #		print(c)
 #		print("random")
 
@@ -291,18 +333,49 @@ with tf.Session() as sess:
 
 
 	
-
-
-	for x in range(10):
+	
+#	fig = plt.figure()
+	
+#	x_array = np.array([])
+#	y_array = np.array([])
+		x_array = np.append(x_array, batch_x)
+		y_array = np.append(y_array, c_[0][:,0])
+		e_array = np.append(e_array,energy)
+		
+	'''
+	for x in range(10000):
 		k = random.uniform(0, 1)
 		k_ = np.reshape(k,(-1,1))
 	#	z = np.reshape(np.array((random.uniform(0, 1),random.uniform(0, 1))),(-1,2))
-		z = np.reshape(np.array(random.uniform(0, 1)),(-1,2))
+	#	z = np.reshape(np.array(random.uniform(0, 1)),(-1,2))
+		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(1,1)),(-1,1))
 		y = sess.run([y_],  feed_dict={X:k_,Z:z})
+		x_array = np.append(x_array, k)
+		print(y[0].shape)
+		y_array = np.append(y_array, y[0][0,0])
 		print(str(k) + "," + str(y))
-
-
-
+	
+	'''
+	print(y_array.shape)
+	ax = fig.add_subplot(111)
+	xs = x_array[:]
+	ys = y_array[:]
+	e_array = (e_array - np.min(e_array))/(np.max(e_array) + np.max(e_array)/4.0-np.min(e_array))
+	scatter = ax.scatter(xs, ys,c=e_array[:],cmap=plt.cm.nipy_spectral,s=1)
+#	ax.scatter(xs, ys,s=1)
+	
+	
+	ax.set_xlabel('X Label')
+	ax.set_ylabel('Y Label')
+	colorbar = fig.colorbar(scatter, ax=ax)
+#	color_map = plt.imshow(ax)
+#	color_map.set_cmap("nipy_spectral")	
+#	im = ax.imshow()
+        #ax.set_zlabel('Z Label')
+#	fig.colorbar(im, ax=ax)
+        #plt.axis('off')
+	plt.savefig("./energy.png", bbox_inches='tight')
+	
 
 
 

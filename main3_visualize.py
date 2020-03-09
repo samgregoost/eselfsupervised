@@ -61,7 +61,7 @@ def set_batch(batch_size):
 	x_array = np.array([])
 	y_array = np.array([])
 	for x in range(batch_size):
-		randnum = random.randint(1,100)
+		randnum = random.randint(1,101)
 		if randnum > 50:
 			maxx = 4
 		else:
@@ -168,7 +168,7 @@ init = tf.global_variables_initializer()
 with tf.Session() as sess:
 	sess.run(init)
 	saver = tf.train.Saver()
-#	saver.restore(sess,'./model.ckpt')
+	saver.restore(sess,'./model.ckpt')
 	for epoch in range(100000):
 		randnum = random.randint(1,101)
 		if randnum > 50:
@@ -248,7 +248,7 @@ with tf.Session() as sess:
 			_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
                                                             Y: batch_y, Z:z})
 		print("saving model")
-		saver.save(sess, "./model_unbalanced.ckpt")
+		saver.save(sess, "./model.ckpt")
 
 
 #		predy = sess.run([y_], feed_dict={X: batch_x,

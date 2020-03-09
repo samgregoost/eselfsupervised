@@ -39,9 +39,6 @@ Z = tf.placeholder("float", [None, 1])
 Z_old = tf.placeholder("float", [None, 1])
 X_old = tf.placeholder("float", [None, 1])
 Z_new = tf.placeholder("float", [None, 1])
-Y_new = tf.placeholder("float", [None, 3])
-Y_old = tf.placeholder("float", [None, 3])
-
 
 
 weights = {
@@ -61,7 +58,7 @@ def set_batch(batch_size):
 	x_array = np.array([])
 	y_array = np.array([])
 	for x in range(batch_size):
-		randnum = random.randint(1,100)
+		randnum = random.randint(1,101)
 		if randnum > 50:
 			maxx = 4
 		else:
@@ -117,33 +114,15 @@ def z_pred(z,x):
     out_layer =  tf.compat.v1.layers.dense(layer_2,1)
     return out_layer
 
-def mag_pred(z,x):
-    # Hidden fully connected layer with 256 neurons
-    print(h)
-    print(z)
-    h_ = tf.concat([x,z],axis = 1)
-    layer_1 = tf.nn.relu(tf.compat.v1.layers.dense(h_,256))
-    # Hidden fully connected layer with 256 neurons
-    layer_2 = tf.nn.relu(tf.compat.v1.layers.dense(layer_1,256))
-    # Output fully connected layer with a neuron for each class
-    out_layer =  tf.compat.v1.layers.dense(layer_2,1)
-    return out_layer
-
-
 h = pred(X)
 #z_ = z_enc(Z)
 y_ = dec(h,Z)
 
 
-z_new_pred = z_pred(Z_old,X_old)
-magnitude_pred =  mag_pred(Z_old,X_old)
+z_new_pred =  z_pred(Z_old,X_old)
+z_loss = tf.reduce_mean(tf.squared_difference(z_new_pred , Z_new))
 
-magnitude_real = tf.reduce_sum(tf.abs(Y_new - Y_old),axis = 1, keep_dims = True)
 
-mag_loss = tf.reduce_mean(tf.abs(magnitude_pred-  magnitude_real))
-z_pred_loss = tf.reduce_mean(tf.squared_difference(z_new_pred , Z_new))
-
-z_loss = z_pred_loss + mag_loss
 
 loss = tf.reduce_mean(tf.squared_difference(y_, Y))
 
@@ -168,7 +147,11 @@ init = tf.global_variables_initializer()
 with tf.Session() as sess:
 	sess.run(init)
 	saver = tf.train.Saver()
-#	saver.restore(sess,'./model.ckpt')
+
+	saver.restore(sess, "./model.ckpt")
+
+	batch_x, batch_y = set_batch(batch_size)
+	'''
 	for epoch in range(100000):
 		randnum = random.randint(1,101)
 		if randnum > 50:
@@ -179,11 +162,12 @@ with tf.Session() as sess:
 		batch_x, batch_y = set_batch(batch_size)
 	
 #		z = np.reshape(np.array((random.uniform(0, 1),random.uniform(0, 1))),(-1,2))
-		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
+#		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
 	#	_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
                     #                                        Y: batch_y, Z:z})
 		print("new batch begins!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 		v = 0
+		
 		for p in range(20):
 
 			z_ol = np.copy(z)
@@ -195,14 +179,14 @@ with tf.Session() as sess:
 			print(c)
 			print("z")
 			print(z)
-			predy = np.reshape(sess.run([y_], feed_dict={X: batch_x,
-                                                            Y: batch_y, Z:z}),(-1,3))
+			predy = sess.run([y_], feed_dict={X: batch_x,
+                                                            Y: batch_y, Z:z})
 
-			print("y_old")
+			print("y_")
 			print(predy)
 			print("y")
 			print(batch_y)
-		
+			print("###################################")
 			g = sess.run([grads],feed_dict={X: batch_x,Y: batch_y,Z:z})
 #			print(g[0][0])
 			v_prev = np.copy(v)
@@ -211,20 +195,11 @@ with tf.Session() as sess:
 			z = np.clip(z, -0.1, 0.1)			
 			
 			z_ne = np.copy(z)
-			y_new = np.reshape(sess.run([y_], feed_dict={X: batch_x,
-                                                            Y: batch_y, Z:z}),(-1,3))
-			print("y_new")
-			print(y_new)
-	#		_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne})
-			
-			
+
+			_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne})
+
+
 			z_new_pre = sess.run([z_new_pred], feed_dict={X_old: x_ol, Z_old:z_ol})
-
-			mag_new =  sess.run([magnitude_real], feed_dict={Y_old:predy, Y_new:y_new})
-			mag_pred = sess.run([magnitude_pred], feed_dict={Z_old:z_ol, X_old: x_ol})
-
-			_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne,Y_old:predy, Y_new:y_new })
-			
 			print("z loss")
 			print(z_lo)
 			print("z_old")
@@ -233,11 +208,7 @@ with tf.Session() as sess:
 			print(z_ne)
 			print("z_new_pred")
 			print(z_new_pre)
-			print("mag")
-			print(mag_new )
-			print("mag_pred")
-			print(mag_pred)		
-			print("##########################################################")	
+			
 		#	c = sess.run([loss], feed_dict={X: batch_x,
                      #                                       Y: batch_y, Z:z})
 			
@@ -248,15 +219,15 @@ with tf.Session() as sess:
 			_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
                                                             Y: batch_y, Z:z})
 		print("saving model")
-		saver.save(sess, "./model_unbalanced.ckpt")
-
+		saver.save(sess, "./model.ckpt")
+		
 
 #		predy = sess.run([y_], feed_dict={X: batch_x,
  #                                                           Y: batch_y, Z:z})	
 
 
 	#	batch_x_, batch_y_ = set_batch(batch_size,-maxx)
-		'''
+		
 		#z_ = np.reshape(np.array((random.uniform(0, 1),random.uniform(0, 1))),(-1,2))
 	#	z = np.reshape(np.array(random.uniform(0, 1)),(-1,1))
 		z = np.reshape(np.random.uniform(low=-0.0, high=1.0, size=(100,1)),(-1,1))
@@ -277,10 +248,36 @@ with tf.Session() as sess:
 	#		_, c = sess.run([train_op, loss], feed_dict={X: batch_x,
          #                                                   Y: batch_y, Z:z})
 		
-		'''
-		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
-		c = sess.run([loss], feed_dict={X: batch_x,
-                                                            Y: batch_y, Z:z})
+	'''
+	z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
+	c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+		
+	for l in range(100):
+		print("z")
+		print(z)
+		z_old = np.copy(z)
+		z = np.reshape(sess.run([z_new_pred], feed_dict={X_old: batch_x, Z_old:z}),(-1,1))
+		print("z_new")
+		print(z)
+		if l < 20:
+			z_diff = z - z_old
+			print("z_diff")
+			print(z_diff) 
+			print(np.abs(z_diff))
+			low_vals = np.abs(z_diff) < 0.03
+			print(low_vals) 
+		#	z[low_vals] = z[low_vals] + z_diff[low_vals] *( -np.log(5*(np.abs(z_diff[low_vals]))) + 0.7)
+
+			z[low_vals] = z[low_vals] + z_diff[low_vals]/np.abs(z_diff[low_vals])*0.05
+			print("z_new_changed")
+			print(z)
+		c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+		print("x")
+		print(batch_x)
+		print("y_pred")
+		print(c)
+
+
 #		print(c)
 #		print("random")
 
