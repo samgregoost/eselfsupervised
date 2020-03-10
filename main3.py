@@ -22,9 +22,9 @@ for x in range(10):
 
 learning_rate = 0.0001
 training_epochs = 15
-batch_size = 3
+batch_size = 2
 display_step = 1
-
+num = 0
 # Network Parameters
 n_hidden_1 = 256 # 1st layer number of neurons
 n_hidden_2 = 256 # 2nd layer number of neurons
@@ -55,17 +55,24 @@ biases = {
     'out': tf.Variable(tf.random_normal([n_classes]))
 }
 
+num = 0
 
-
-def set_batch(batch_size):
+def set_batch(batch_size,num):
 	x_array = np.array([])
 	y_array = np.array([])
+#num = 0
 	for x in range(batch_size):
-		randnum = random.randint(1,100)
-		if randnum > 50:
+		if num == 0:
 			maxx = 4
-		else:
+			num = 1
+		elif num == 1:
 			maxx = -4
+			num = 0
+	#	randnum = random.randint(1,2)
+	#	if randnum == 1:
+	#		maxx = 4
+	#	if randnum == 2:
+	#		maxx = -4
 		m = maxx		
 		y_ind =  np.array([])
 		k = random.uniform(0, 1)
@@ -79,7 +86,7 @@ def set_batch(batch_size):
 	x_array = np.reshape(x_array,(-1,1))
 	y_array = np.reshape(y_array,(-1,3))
 	
-	return x_array, y_array
+	return x_array, y_array, num
 
 
 
@@ -90,7 +97,7 @@ def pred(x):
     # Hidden fully connected layer with 256 neurons
     layer_2 = tf.nn.relu(tf.compat.v1.layers.dense(layer_1,256))
     # Output fully connected layer with a neuron for each class
-    out_layer =  tf.compat.v1.layers.dense(layer_2,3)
+    out_layer =  tf.nn.sigmoid(tf.compat.v1.layers.dense(layer_2,3))
     return out_layer
 
 def dec(h,z):
@@ -126,7 +133,7 @@ def mag_pred(z,x):
     # Hidden fully connected layer with 256 neurons
     layer_2 = tf.nn.relu(tf.compat.v1.layers.dense(layer_1,256))
     # Output fully connected layer with a neuron for each class
-    out_layer =  tf.compat.v1.layers.dense(layer_2,1)
+    out_layer =  tf.nn.sigmoid(tf.compat.v1.layers.dense(layer_2,1))
     return out_layer
 
 
@@ -138,9 +145,9 @@ y_ = dec(h,Z)
 z_new_pred = z_pred(Z_old,X_old)
 magnitude_pred =  mag_pred(Z_old,X_old)
 
-magnitude_real = tf.reduce_sum(tf.abs(Y_new - Y_old),axis = 1, keep_dims = True)
+magnitude_real = tf.reduce_sum(tf.abs(Z_new - Z_old),axis = 1, keep_dims = True)
 
-mag_loss = tf.reduce_mean(tf.abs(magnitude_pred-  magnitude_real))
+mag_loss = tf.reduce_mean(tf.squared_difference(magnitude_pred,magnitude_real))
 z_pred_loss = tf.reduce_mean(tf.squared_difference(z_new_pred , Z_new))
 
 z_loss = z_pred_loss + mag_loss
@@ -176,7 +183,8 @@ with tf.Session() as sess:
 		else:
 			maxx = -4
 
-		batch_x, batch_y = set_batch(batch_size)
+		batch_x, batch_y,num = set_batch(3,num)
+		batch_x = np.interp(batch_x, (0, 1.0), (-0.1, +0.1))
 	
 #		z = np.reshape(np.array((random.uniform(0, 1),random.uniform(0, 1))),(-1,2))
 		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
@@ -220,10 +228,10 @@ with tf.Session() as sess:
 			
 			z_new_pre = sess.run([z_new_pred], feed_dict={X_old: x_ol, Z_old:z_ol})
 
-			mag_new =  sess.run([magnitude_real], feed_dict={Y_old:predy, Y_new:y_new})
+			mag_new =  sess.run([magnitude_real], feed_dict={Z_old:z_ol, Z_new:z_ne})
 			mag_pred = sess.run([magnitude_pred], feed_dict={Z_old:z_ol, X_old: x_ol})
 
-			_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne,Y_old:predy, Y_new:y_new })
+			_, z_lo = sess.run([train_z, z_loss], feed_dict={X_old: x_ol, Z_old:z_ol, Z_new: z_ne })
 			
 			print("z loss")
 			print(z_lo)

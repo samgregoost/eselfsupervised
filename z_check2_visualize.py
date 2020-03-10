@@ -90,7 +90,7 @@ def pred(x):
     # Hidden fully connected layer with 256 neurons
     layer_2 = tf.nn.relu(tf.compat.v1.layers.dense(layer_1,256))
     # Output fully connected layer with a neuron for each class
-    out_layer =  tf.compat.v1.layers.dense(layer_2,3)
+    out_layer =  tf.nn.sigmoid(tf.compat.v1.layers.dense(layer_2,3))
     return out_layer
 
 def dec(h,z):
@@ -126,7 +126,7 @@ def mag_pred(z,x):
     # Hidden fully connected layer with 256 neurons
     layer_2 = tf.nn.relu(tf.compat.v1.layers.dense(layer_1,256))
 # Output fully connected layer with a neuron for each class
-    out_layer =  tf.compat.v1.layers.dense(layer_2,1)
+    out_layer =  tf.nn.sigmoid(tf.compat.v1.layers.dense(layer_2,1))
     return out_layer
 
 
@@ -176,6 +176,7 @@ with tf.Session() as sess:
 	
 	for epoch in range(100):
 		batch_x, batch_y = set_batch(batch_size)
+		batch_x_ = np.interp(batch_x, (0, 1.0), (-0.1, +0.1))
 		'''
 		randnum = random.randint(1,101)
 		if randnum > 50:
@@ -279,10 +280,10 @@ with tf.Session() as sess:
 		z = np.reshape(np.random.uniform(low=-0.1, high=0.1, size=(3,1)),(-1,1))
 #		z = z/np.abs(z) * maxx
 	
-		c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+		c = sess.run([y_], feed_dict={X: batch_x_, Z:z})
 	
 		for l in range(100):
-			energy = np.reshape(sess.run([k_energy], feed_dict={X_old: batch_x, Z_old:z}),(-1,1))
+			energy = np.reshape(sess.run([k_energy], feed_dict={X_old: batch_x_, Z_old:z}),(-1,1))
 			print("energy")
 			print(energy)
 #		g =  sess.run([mag_grads],feed_dict={X_old: batch_x,Z_old:z})
@@ -293,15 +294,15 @@ with tf.Session() as sess:
 		
 			print("z")
 			print(z)
-			c  = sess.run([y_], feed_dict={X: batch_x, Z:z})
+			c  = sess.run([y_], feed_dict={X: batch_x_, Z:z})
 			print("y_pred")
 			print(c)
 			z_old = np.copy(z)
-			z = np.reshape(sess.run([z_new_pred], feed_dict={X_old: batch_x, Z_old:z}),(-1,1))
+			z = np.reshape(sess.run([z_new_pred], feed_dict={X_old: batch_x_, Z_old:z}),(-1,1))
 #			z = np.clip(z, -0.1, 0.1)
 			print("z_new")
 			print(z)
-			c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+			c = sess.run([y_], feed_dict={X: batch_x_, Z:z})
 			print("y_pred_new")
 			print(c)
 			print("z_new_changed")
@@ -312,7 +313,7 @@ with tf.Session() as sess:
 					z = z + z_diff/np.abs(z_diff)*0.1*energy
 				z = np.clip(z, -0.1, 0.1)
 				print(z)
-			c = sess.run([y_], feed_dict={X: batch_x, Z:z})
+			c = sess.run([y_], feed_dict={X: batch_x_, Z:z})
 			print("x")
 			print(batch_x)
 			print("y_pred_new_changed")
